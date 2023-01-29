@@ -4,8 +4,8 @@ Il faut avoir un compte github pour effectuer ce tutoriel. <br />
 # Tutoriel Premier Téléchargement <br />
 Pour le premier téléchargement, il faut télécharger le projet sur l'ordinateur. <br />
 Tout d'abord, placez-vous dans le fichier où vous souhaitez avoir le fichier. Puis ouvrez un terminal. <br />
-Il faut écrire : git clone url_du_Projet <br />
-l'url est copiable depuis le bouton "<> Code". <br />
+Il faut écrire : ```git clone url_du_Projet``` <br />
+l'url est copiable depuis le bouton ```<> Code```. <br />
 Normalement, le dossier devrait apparaitre avec tous les fichiers et sous-dossier.<br />
 <br />
 # Mettre à jour le projet. <br />
