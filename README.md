@@ -21,7 +21,18 @@ Dans le terminal, écrivez les commandes suivantes : <br />
 ```git add *``` pour ajouter toutes les modifications sur les fichiers du projets ou ```git add NameOfTheFile``` pour ajouter les modification sur 1 fichiers <br />
 ```git commit -m"la modification ou la correction apporter"```<br />
 ```git push```<br />
-Il faudra ensuite se connecter sur votre compte pour finaliser l'opération.<br />
+Il faudra ensuite se connecter sur votre compte pour finaliser l'opération. Voir la section ci dessous pour ça.<br />
+<br />
+### Se connecter pour les modifications sur le terminal.<br />
+Si on essaie de se connecter lors d'un ```git push``` avec  le mot de passe utilisateur, cela nous renvoie une erreur.<br />
+La solution est de créer un token pour cela, qui correspond à un mot de passe random mieux protéger!<br />
+Pour le créer, il suffit d'aller sur notre profil dans ```settings```. <br />
+Une fois dedans, aller dans ```developper settings```, puis dans ```Personnal access tokens``` et dans ```Tokens```.<br />
+Cliquer sur ```Generate new token```, prendre la version ```classic```.<br />
+Renter son mot de passe utilisateur.<br />
+Il faut changer expiration par ```No expiration```. Cocher ensuite les cases souhaiter.<br />
+Le token est ensuite générer. Il faut le sauvegarder à un endroit car pour tous les changements ce sera le même token.<br />
+Il n'y a donc pas besoin d'en générer un à chaque modifications.<br />
 <br />
 ## Organisation des fichiers (sujet à modification) : <br />
 Pour chaque "projet", il y a un dossier correspondant. <br />
