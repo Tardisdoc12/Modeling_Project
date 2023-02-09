@@ -116,7 +116,6 @@ int main(){
   cout<<"starting number ="<<imax<<endl;
   //fin de l'initialisation--------------------------------------------------------------------------------------
   cout<<subnomi(250)<<endl;
-  //"Ceci est un changement"
 
 
   return 0;
