@@ -1,8 +1,10 @@
 #include<iostream>
 #include<cmath>
 #include<fstream>
+#include<string>
 #include<vector>
 #include<sstream>
+#include<typeinfo>
 using namespace std;
 /*
        ******************************************************
@@ -17,11 +19,13 @@ using namespace std;
        *   composition                      : cmet          *
        *   atoms number of metal 1          : nat1          *
        *   chemical potential difference    : dmu           *
+       *   cut distance                     : dcut          *
        *     dmu= mu_B - mu_A if we change A in B           *
        *                                                    *
        ******************************************************
 */
 
+const double dcut=sqrt(2)+0.01;
 //fonction pour ouvrir des fichiers-----------------------------------------------------------------------------
 bool open_file(string filename){
   ifstream fichier_entree(filename);
@@ -103,7 +107,66 @@ float energy(int natot){
   }
   return energy_total;
 }
+
+
+
+vector<string> treat_line(string line, vector<string> &sous_maille){
+  sous_maille=split(line,' ');
+  cout<<"j"<<sous_maille[0]<<endl<<"a"<<sous_maille[1]<<endl<<"b"<<sous_maille[2]<<"c"<<endl;
+  vector<string> true_maille;
+  for(int i=0;i<sous_maille.size();i++){
+    if(sous_maille[i]!=" "){
+      true_maille.push_back(sous_maille[i]);
+    }
+  }
+  return true_maille;
+}
 //----------------------------------------------------------------------------------------------------------------
+
+//creation de la structure (atomes de toutes les mailles)
+vector<vector<string>> maille_crea(string filename){
+  vector<vector<string>>  maille; //dans chaque emplacement du vecteur de vecteur, il y aura : type atome,x,y,z
+  if (open_file(filename)){
+    ifstream file(filename);
+    string line;
+    getline(file, line);
+    getline(file, line);
+    vector<string> sous_maille;
+    while(getline(file,line)){
+      vector<string> true_sous_maille=treat_line(line,sous_maille);
+      maille.push_back(true_sous_maille);
+    }
+    file.close();
+    return maille;
+  }
+  else{
+    return maille;
+  }
+
+}
+
+/*double distance(vector<vector<string>> atome,int i,int j){
+  double dist=sqrt(pow(stod(atome[i][1])-stod(atome[j][1]),2)+pow(stod(atome[i][2])-stod(atome[j][2]),2)+pow(stod(atome[i][3])-stod(atome[j][3]),2));
+  return dist;
+  }
+
+void voisin(vector<vector<string>> maille){
+    vector<int> nvois=vector<int>(maille.size(),0);
+    vector<vector<int>> ivois=vector<vector<int>>(maille.size(),vector<int>(0,0));
+    for(int i=0;i<maille.size();i++){
+      for(int j=i+1;j<maille.size();j++){
+        if(distance(maille,i,j)<dcut){
+          nvois[i]=nvois[i]+1;
+          nvois[j]=nvois[j]+1;
+          ivois[i].push_back(j);
+          ivois[j].push_back(i);
+        }
+      }
+    }
+}*/
+
+
+
 int main(){
 
   //initialisation avec les fichiers-----------------------------------------------------------------------------
@@ -116,6 +179,12 @@ int main(){
   cout<<"starting number ="<<imax<<endl;
   //fin de l'initialisation--------------------------------------------------------------------------------------
   cout<<subnomi(250)<<endl;
+  vector<vector<string>> a;
+  a=maille_crea("./init.dat");
+  for(int i=0;i<a[3].size();i++){
+    cout<<a[3][i]<<endl;
+  }
+  cout<<typeid(a[3][0]).name()<<endl;
 
 
   return 0;
