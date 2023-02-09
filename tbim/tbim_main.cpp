@@ -5,6 +5,9 @@
 #include<vector>
 #include<sstream>
 #include<typeinfo>
+#include<regex>
+#include<algorithm>
+#include<iterator>
 using namespace std;
 /*
        ******************************************************
@@ -25,7 +28,7 @@ using namespace std;
        ******************************************************
 */
 
-const double dcut=sqrt(2)+0.01;
+const double dcut=1/sqrt(2)+0.01;
 //fonction pour ouvrir des fichiers-----------------------------------------------------------------------------
 bool open_file(string filename){
   ifstream fichier_entree(filename);
@@ -54,6 +57,15 @@ vector<string> split( string &chaine, char delimiteur) {
  vector<string> elements;
  split(chaine, delimiteur, elements);
  return elements;
+}
+
+
+vector<string> split2(const string com){
+  vector<string> result{};
+  const std::regex re("\\s+");
+  std::transform(std::sregex_token_iterator(com.begin(), com.end(), re,-1), {}, std::back_inserter(result),[](std::string s) { return std::regex_replace(s, std::regex("\""), ""); });
+  result.erase(result.begin());
+  return result;
 }
 //---------------------------------------------------------------------------------------------------------------
 
@@ -90,11 +102,7 @@ string subnomi(int mnomi){
     string filename;
     int nbr_chiffre;
     string mnomi_str=to_string(mnomi);
-    string filename_inter="";
-    for(size_t i=0;i<mnomi_str.length();i++){
-      filename_inter=filename_inter+"0";
-    }
-    filename="p"+filename_inter+".xyz";
+    filename="p"+mnomi_str+".xyz";
     return filename;
 }
 //----------------------------------------------------------------------------------------------------------------
@@ -107,33 +115,22 @@ float energy(int natot){
   }
   return energy_total;
 }
-
-
-
-vector<string> treat_line(string line, vector<string> &sous_maille){
-  sous_maille=split(line,' ');
-  cout<<"j"<<sous_maille[0]<<endl<<"a"<<sous_maille[1]<<endl<<"b"<<sous_maille[2]<<"c"<<endl;
-  vector<string> true_maille;
-  for(int i=0;i<sous_maille.size();i++){
-    if(sous_maille[i]!=" "){
-      true_maille.push_back(sous_maille[i]);
-    }
-  }
-  return true_maille;
-}
 //----------------------------------------------------------------------------------------------------------------
 
-//creation de la structure (atomes de toutes les mailles)
-vector<vector<string>> maille_crea(string filename){
+//creation de la structure (atomes de toutes les mailles)---------------------------------------------------------
+vector<vector<string>> maille_crea(string filename,vector<float>& boxe){
   vector<vector<string>>  maille; //dans chaque emplacement du vecteur de vecteur, il y aura : type atome,x,y,z
   if (open_file(filename)){
     ifstream file(filename);
     string line;
     getline(file, line);
     getline(file, line);
-    vector<string> sous_maille;
+    vector<string> boxe_file=split2(line);
+    for(int h=0;h<boxe_file.size();h++){
+      boxe.push_back(stof(boxe_file[h]));
+    }
     while(getline(file,line)){
-      vector<string> true_sous_maille=treat_line(line,sous_maille);
+      vector<string> true_sous_maille=split2(line);
       maille.push_back(true_sous_maille);
     }
     file.close();
@@ -144,31 +141,60 @@ vector<vector<string>> maille_crea(string filename){
   }
 
 }
+//-----------------------------------------------------------------------------------------------------------------
 
-/*double distance(vector<vector<string>> atome,int i,int j){
-  double dist=sqrt(pow(stod(atome[i][1])-stod(atome[j][1]),2)+pow(stod(atome[i][2])-stod(atome[j][2]),2)+pow(stod(atome[i][3])-stod(atome[j][3]),2));
+//Function to calculate each neighbor------------------------------------------------------------------------------
+double distance(float xij,float yij, float zij){
+  float xij2=pow(xij,2);
+  float yij2=pow(yij,2);
+  float zij2=pow(zij,2);
+  double dist=sqrt(xij2+yij2+zij2);
   return dist;
-  }
+}
 
-void voisin(vector<vector<string>> maille){
-    vector<int> nvois=vector<int>(maille.size(),0);
-    vector<vector<int>> ivois=vector<vector<int>>(maille.size(),vector<int>(0,0));
-    for(int i=0;i<maille.size();i++){
-      for(int j=i+1;j<maille.size();j++){
-        if(distance(maille,i,j)<dcut){
-          nvois[i]=nvois[i]+1;
-          nvois[j]=nvois[j]+1;
-          ivois[i].push_back(j);
-          ivois[j].push_back(i);
-        }
+void voisin(vector<vector<string>> maille,vector<int> &nvois,vector<vector<int>> &ivois,vector<float>& boxe){
+  for(int i=0;i<maille.size()-1;i++){
+    for(int j=i+1;j<maille.size();j++){
+      //preparation of the limit conditions :--------------------------------------------
+      float xij=stof(maille[j][1])-stof(maille[i][1]);
+      float yij=stof(maille[j][1])-stof(maille[i][1]);
+      float zij=stof(maille[j][1])-stof(maille[i][1]);
+      float boxe_x=boxe[0];
+      float boxe_y=boxe[1];
+      float boxe_z=boxe[2];
+      //Limit conditions :----------------------------------------------------------------
+      if(abs(xij+boxe_x)<xij){
+        xij=xij+boxe_x;
+      }
+      if(abs(xij-boxe_x)<xij){
+        xij=xij-boxe_x;
+      }
+      if(abs(yij+boxe_y)<yij){
+        yij=yij+boxe_y;
+      }
+      if(abs(yij-boxe_y)<yij){
+        yij=yij-boxe_y;
+      }
+      if(abs(zij+boxe_z)<zij){
+        zij=zij+boxe_z;
+      }
+      if(abs(zij-boxe_z)<zij){
+        zij=zij-boxe_z;
+      }
+      //calucl and verification if i is neighbor of j:
+      if(distance(xij,yij,zij)<dcut){
+        nvois[i]=nvois[i]+1;
+        nvois[j]=nvois[j]+1;
+        ivois[i].push_back(j);
+        ivois[j].push_back(i);
       }
     }
-}*/
+  }
+}
+//-------------------------------------------------------------------------------------------------------------------
 
-
-
+//Main---------------------------------------------------------------------------------------------------------------
 int main(){
-
   //initialisation avec les fichiers-----------------------------------------------------------------------------
   string filename="./in.dat";
   vector<float> elements;
@@ -178,14 +204,14 @@ int main(){
   imax=elements[6];jmax=elements[7];kmax=elements[8];iconf=elements[9];irand=elements[10];float npeq=20*npw;
   cout<<"starting number ="<<imax<<endl;
   //fin de l'initialisation--------------------------------------------------------------------------------------
-  cout<<subnomi(250)<<endl;
-  vector<vector<string>> a;
-  a=maille_crea("./init.dat");
-  for(int i=0;i<a[3].size();i++){
-    cout<<a[3][i]<<endl;
+  vector<vector<string>> maille;
+  vector<float> boxe;
+  maille=maille_crea("./init.dat",boxe);
+  vector<int> nvois=vector<int>(maille.size(),0);
+  vector<vector<int>> ivois=vector<vector<int>>(maille.size(),vector<int>(0,0));
+  voisin(maille,nvois,ivois,boxe);
+  for(int i=0;i<ivois[0].size();i++){
+    cout<<ivois[0][i]<<endl;
   }
-  cout<<typeid(a[3][0]).name()<<endl;
-
-
   return 0;
 }
