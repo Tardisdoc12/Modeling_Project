@@ -28,7 +28,9 @@ using namespace std;
        ******************************************************
 */
 
-const double dcut=1/sqrt(2)+0.01;
+const float dcut=1/sqrt(2)+0.01;
+const float V=-0.023;
+const float Tau=0.55/12.;
 //fonction pour ouvrir des fichiers-----------------------------------------------------------------------------
 bool open_file(string filename){
   ifstream fichier_entree(filename);
@@ -108,10 +110,20 @@ string subnomi(int mnomi){
 //----------------------------------------------------------------------------------------------------------------
 
 //Calcul de l'énergie---------------------------------------------------------------------------------------------
-float energy(int natot){
-  float energy_total;
-  for(int i=0;i<natot;i++){
-    float energy_i;
+float energy(const vector<vector<string>> maille,const vector<int> nvois,const vector<vector<int>> ivois,vector<float>& energy_atom,const float N_atoms){
+  float energy_total=0.;
+  string type=maille[0][0];
+  for(int i=0;i<N_atoms;i++){
+    if(maille[i][0]==type){
+      for(int j=0;j<nvois[i];j++){
+        int voisin_k=ivois[i][j];
+        if(maille[voisin_k][0]==type){
+          energy_atom[i]=energy_atom[i]+V;
+        }
+      }
+      energy_atom[i]=energy_atom[i]+nvois[i]*(Tau-V);
+    }
+    energy_total=energy_total+energy_atom[i];
   }
   return energy_total;
 }
@@ -157,31 +169,31 @@ void voisin(vector<vector<string>> maille,vector<int> &nvois,vector<vector<int>>
     for(int j=i+1;j<maille.size();j++){
       //preparation of the limit conditions :--------------------------------------------
       float xij=stof(maille[j][1])-stof(maille[i][1]);
-      float yij=stof(maille[j][1])-stof(maille[i][1]);
-      float zij=stof(maille[j][1])-stof(maille[i][1]);
+      float yij=stof(maille[j][2])-stof(maille[i][2]);
+      float zij=stof(maille[j][3])-stof(maille[i][3]);
       float boxe_x=boxe[0];
       float boxe_y=boxe[1];
       float boxe_z=boxe[2];
       //Limit conditions :----------------------------------------------------------------
-      if(abs(xij+boxe_x)<xij){
+      if(abs(xij+boxe_x)<abs(xij)){
         xij=xij+boxe_x;
       }
-      if(abs(xij-boxe_x)<xij){
+      if(abs(xij-boxe_x)<abs(xij)){
         xij=xij-boxe_x;
       }
-      if(abs(yij+boxe_y)<yij){
+      if(abs(yij+boxe_y)<abs(yij)){
         yij=yij+boxe_y;
       }
-      if(abs(yij-boxe_y)<yij){
+      if(abs(yij-boxe_y)<abs(yij)){
         yij=yij-boxe_y;
       }
-      if(abs(zij+boxe_z)<zij){
+      if(abs(zij+boxe_z)<abs(zij)){
         zij=zij+boxe_z;
       }
-      if(abs(zij-boxe_z)<zij){
+      if(abs(zij-boxe_z)<abs(zij)){
         zij=zij-boxe_z;
       }
-      //calucl and verification if i is neighbor of j:
+      //calcul and verification if i is neighbor of j:
       if(distance(xij,yij,zij)<dcut){
         nvois[i]=nvois[i]+1;
         nvois[j]=nvois[j]+1;
@@ -207,11 +219,12 @@ int main(){
   vector<vector<string>> maille;
   vector<float> boxe;
   maille=maille_crea("./init.dat",boxe);
-  vector<int> nvois=vector<int>(maille.size(),0);
-  vector<vector<int>> ivois=vector<vector<int>>(maille.size(),vector<int>(0,0));
+  float N_atoms=maille.size();
+  vector<int> nvois=vector<int>(N_atoms,0);
+  vector<vector<int>> ivois=vector<vector<int>>(N_atoms,vector<int>(0,0));
+  vector<float> energy_atoms=vector<float>(N_atoms,0);
   voisin(maille,nvois,ivois,boxe);
-  for(int i=0;i<ivois[0].size();i++){
-    cout<<ivois[0][i]<<endl;
-  }
+  cout<<"L'energy du systeme est = "<<energy(maille,nvois,ivois,energy_atoms,N_atoms)<<endl;
+  //we have created nvois and ivois!!----------------------------------------------------------------------------
   return 0;
 }
