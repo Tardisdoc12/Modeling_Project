@@ -31,9 +31,12 @@ using namespace std;
 const float dcut=1/sqrt(2)+0.01;
 const float V=-0.023;
 const float Tau=0.55/12.;
+<<<<<<< HEAD
 const float temp=300;
 const float dmu=0.1;
 const float cbol=0.0000862;
+=======
+>>>>>>> ceef0255db7354c1221993e4ad4a0c31a0a53926
 //fonction pour ouvrir des fichiers-----------------------------------------------------------------------------
 bool open_file(string filename){
   ifstream fichier_entree(filename);
@@ -207,6 +210,7 @@ void voisin(vector<vector<string>> maille,vector<int> &nvois,vector<vector<int>>
   }
 }
 //-------------------------------------------------------------------------------------------------------------------
+<<<<<<< HEAD
 //exchange 2 atoms
 mc_exchange(float temp,float dmu,int npas,const vector<int> nvois,const vector<vector<int>> ivois,vector<float> energy_atom,vector<vector<string>> maille,string impurity){
   // our initial energy
@@ -235,6 +239,8 @@ mc_exchange(float temp,float dmu,int npas,const vector<int> nvois,const vector<v
 
 
 }
+=======
+>>>>>>> ceef0255db7354c1221993e4ad4a0c31a0a53926
 
 //Main---------------------------------------------------------------------------------------------------------------
 int main(){
