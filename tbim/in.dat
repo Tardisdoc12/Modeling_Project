@@ -1,11 +1,14 @@
-\\test
-12
-15
-16
-17
-2
-50
-56
-54
-25
-60\\c'est_la_fin
+fichier des parametres :
+100              npas
+1		            npw	(npas > 20*npw)
+4000.           temp
+0.18d0          dmu
+10              idmumax
+0.05d0	        ddmu
+6               imax
+6               jmax
+6	 			        kmax
+0               iconf = 0 (construction du slab) sinon lecture "p.in"
+12682319        irand
+Cu              élément de base
+Ag              élément introduit
