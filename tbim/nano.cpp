@@ -1,7 +1,7 @@
 #include "nano.h"
 using namespace std;
 
-string dateTime(){
+string dateTime(){ //function to find the date and to convert it to a string
   int rc;
   time_t temp;
   struct tm *timeptr;
@@ -13,7 +13,7 @@ string dateTime(){
   return str;
 }
 
-string creates_directory(string name){
+string creates_directory(string name){ //create a directory with the given name
   string date=dateTime();
   date.pop_back();
   date.pop_back();
@@ -31,8 +31,8 @@ string creates_directory(string name){
 
 
 
-namespace nano{
-  namespace{
+namespace nano{ //namespace to ease the use for people
+  namespace{ //anonymous namespace to protect the different parameters
     /*
            ******************************************************
            *                                                    *
@@ -69,10 +69,10 @@ namespace nano{
 
 //functions of nano :  //nano:://---------------------------
 
-bool open_file(string filename){
+bool open_file(string filename){ //test the opening with ifstream
   ifstream fichier_entree(filename);
   if(!fichier_entree){
-    ofstream fichier(filename);
+    ofstream fichier(filename); //if the opening ifstream we open it with ofstream
     fichier.close();
     return false;
   }
@@ -83,19 +83,19 @@ bool open_file(string filename){
 }
 
 //construction of all parameters (Needed for starting calcul)
-void initialize(string filename){
+void initialize(string filename){ //initialize all the parameters, it is mandatory!!
   vector<string> elements;
   if(!open_file(filename)){
-    cerr<<"ERROR cannot open file "<<filename;
+    cerr<<"ERROR cannot open file "<<filename; //if there is no file send error
   }
   else{
     ifstream in(filename);
     string _r;
     getline(in,_r);
     string line;
-    cout<<"Charging the paramters... \n Please wait..."<<endl;
+    cout<<"Charging the paramters... \n Please wait..."<<endl; //inform the user that the charging is starting
     while(getline(in,line)){
-      vector<string> inLine=split(line);
+      vector<string> inLine=split(line); //reading the file and we will attribute to all parameters
       elements.push_back(inLine[0]);
     }
     in.close();
@@ -104,12 +104,12 @@ void initialize(string filename){
   dmu=stof(elements[3]);idmumax=stoi(elements[4]);ddmu=stof(elements[5]);
   imax=stoi(elements[6]);jmax=stoi(elements[7]);kmax=stoi(elements[8]);iconf=stoi(elements[9]);
   irand=stoi(elements[10]);npeq=20*npw;
-  verification_initialized=true;
+  verification_initialized=true; //to let all function runs after!
   cout<<"Parameters loaded.\n Loading of V and Tau..."<<endl;
   //properties of the system :
   //potential V
   if(!open_file("../properties/systems.dat")){
-    cerr<<"IMPORTANT ERROR : File \"systems.dat\" not found!";
+    cerr<<"IMPORTANT ERROR : File \"systems.dat\" not found!"; //file not found throw an error
   }
   else{
     impurity=elements[12];base=elements[11];
@@ -117,7 +117,7 @@ void initialize(string filename){
     string line;
     string system=base+"-"+impurity;
     vector<string> datas;
-    while(getline(file,line)){
+    while(getline(file,line)){ //reading the file and we attribute the potential and tau
       datas=split(line);
       if(datas[0]==system){
         cout<<"V ="<<datas[1]<<endl;
@@ -146,20 +146,21 @@ void initialize(string filename){
   }
   cout<<"End of loading V and Tau."<<endl;
 }
+//end of the initialization
 
-vector<string> split(const string com){
+vector<string> split(const string com){ //split a string by space
   vector<string> result;
-  const regex re("\\s+");
+  const regex re("\\s+"); //the space character then split the string
   transform(sregex_token_iterator(com.begin(), com.end(), re,-1), {}, back_inserter(result),[](string s) { return regex_replace(s, regex("\""), ""); });
   return result;
 }
 
-int randomf(int range){
+int randomf(int range){ //return a random number
   srand (time(NULL));
   return rand()%range;
 }
 
-string name_file(int mnomi){
+string name_file(int mnomi){ //create a new file name
   string filename;
   string mnomi_str=to_string(mnomi);
   filename="p"+mnomi_str+".dat";
@@ -170,11 +171,11 @@ double distance(float xij,float yij, float zij){
   float xij2=pow(xij,2);
   float yij2=pow(yij,2);
   float zij2=pow(zij,2);
-  double dist=sqrt(xij2+yij2+zij2);
+  double dist=sqrt(xij2+yij2+zij2); //define the distance
   return dist;
 }
 
-int mc_exchange(Maille& maille,int ipas){
+int mc_exchange(Maille& maille,int ipas){ //exchange particles and calcul the new energy
   //our initial energy--------------------------------------------------------------------------------
   int n_impu=0;
   int Natom_tot=maille.getNumberOfAtoms();
@@ -214,24 +215,24 @@ int mc_exchange(Maille& maille,int ipas){
   return Natom_base;
 }
 
-float Monte_Carlo(Maille& maille){
+float Monte_Carlo(Maille& maille){ //make the monte carlo algorithm
   string Directory_name="Simulation";
-  string dir=creates_directory(Directory_name);
-  maille.voisin();
-  if(!verification_initialized){
+  string dir=creates_directory(Directory_name); //create the directory fo the simulation
+  maille.voisin(); //create the ivois and nvois of the maille
+  if(!verification_initialized){ //verify that all parameters are initialize and throw an error if not!
     cerr<<"Error : parameters not initialized! Please use the function nano::initialize(string filename) to initialize them!";
   }
-  for(int pas=0;pas<npas;pas++){
-    int N_atom1=mc_exchange(maille,pas);
+  for(int pas=0;pas<npas;pas++){ //start the algorithm
+    int N_atom1=mc_exchange(maille,pas); //exchange atoms
     if(pas>npeq){
       //Calculs about the energy of the exchange----
-      float energy_total = maille.energy();
-      energy_sum=energy_sum+energy_total;
-      c2sum=c2sum+(1-N_atom1/maille.getNumberOfAtoms());
+      float energy_total = maille.energy(); //calcul the energy
+      energy_sum=energy_sum+energy_total; //energy final
+      c2sum=c2sum+(1-N_atom1/maille.getNumberOfAtoms()); //final concentration
       //Writing into the file for some configurations
       string filename=name_file(pas);
       string path="./"+dir+"/"+filename;
-      maille.write_parameters(path,pas);
+      maille.write_parameters(path,pas); //write the configuration in a file which is in the directory!
     }
   }
   return energy_sum;
@@ -241,50 +242,50 @@ float Monte_Carlo(Maille& maille){
 
 
 //class Boxe{
-  Boxe::Boxe(){
+  Boxe::Boxe(){ //new class (new kind of variables like int, double etc...)
     x=0;y=0;z=0;
   }
 
-  void Boxe::setDimension(string line){
+  void Boxe::setDimension(string line){ //set the dimension of the boxe
     vector<string> dim=split(line);
     dim.erase(dim.begin());
     x=stof(dim[0]);y=stof(dim[1]);z=stof(dim[2]);
   }
 
-  vector<float> Boxe::getDimension(){
+  vector<float> Boxe::getDimension(){ //return the dimension (not constant but must be in futur)
     vector<float> dim={x,y,z};
     return dim;
   }
 
-  Boxe::~Boxe(){
+  Boxe::~Boxe(){ //destructor (useless here but can be usefull if we make inherit a new class)!
 
   }
 //};
 
 
-//class Nanoparticle{
-  Nanoparticle::Nanoparticle(){
+//class Nanoparticle{ //class Nanoparticle
+  Nanoparticle::Nanoparticle(){ //creator for a variables of this kind
     x=0;y=0;z=0;
     kind="Null";
     apar=0;ecoh=0;
   }
 
-  void Nanoparticle::set_param(string line){
-    vector<string> true_sous_maille=split(line);
-    true_sous_maille.erase(true_sous_maille.begin());
-    kind=true_sous_maille[0];
+  void Nanoparticle::set_param(string line){ // will set all parameters of the nanoparticle (need for the maille) the string will give the kind, the position (x,y,z)
+    vector<string> true_sous_maille=split(line); //split the string to have the kind,x,y,z separate in a vector
+    true_sous_maille.erase(true_sous_maille.begin()); // erase the first term that will be a space
+    kind=true_sous_maille[0]; //attribute the different variables
     x=stof(true_sous_maille[1]);y=stof(true_sous_maille[2]);z=stof(true_sous_maille[3]);
-    if(!open_file("../properties/elements.dat")){
+    if(!open_file("../properties/elements.dat")){ //will test to open the file for the properties of the kind of the nanoparticles
       cerr<<"IMPORTANT ERROR : File \"elements.dat\" not find! Please verify the existence of the file!";
     }
-    else{
+    else{ //if the file exist, lets go! we will read it.
       ifstream file("../properties/elements.dat");
       string line;
       vector<string> datas;
-      while(getline(file,line)){
+      while(getline(file,line)){ //we will need to read each lines
         datas=split(line);
-        if(datas[0]==kind){
-          apar=stof(datas[1]);
+        if(datas[0]==kind){ //if we find the good line
+          apar=stof(datas[1]); //attribute the parameters of the nanoparticles
           ecoh=stof(datas[2]);
         }
       }
@@ -292,51 +293,68 @@ float Monte_Carlo(Maille& maille){
     }
   }
 
-  vector<float> Nanoparticle::position(){
+  vector<float> Nanoparticle::position(){ //will return the position! (again => must be const) (I or Yasmina will do it)
     vector<float> position={x,y,z};
     return position;
   }
 
-  string Nanoparticle::getKind(){
+  string Nanoparticle::getKind(){//will return the kind (const)
     return kind;
   }
 
-  void Nanoparticle::change_type(string new_type){
-    kind=new_type;
+  void Nanoparticle::change_type(string new_type){ //will change the type of the variable
+    kind=new_type; //change the kind of the particle
+    //find again the new properties of the particle!
+    if(!open_file("../properties/elements.dat")){ //will test to open the file for the properties of the kind of the nanoparticles
+      cerr<<"IMPORTANT ERROR : File \"elements.dat\" not find! Please verify the existence of the file!";
+    }
+    else{ //if the file exist, lets go! we will read it.
+      ifstream file("../properties/elements.dat");
+      string line;
+      vector<string> datas;
+      while(getline(file,line)){ //we will need to read each lines
+        datas=split(line);
+        if(datas[0]==kind){ //if we find the good line
+          apar=stof(datas[1]); //attribute the parameters of the nanoparticles
+          ecoh=stof(datas[2]);
+        }
+      }
+      file.close();
+    }
   }
 
-  Nanoparticle::~Nanoparticle(){
+  Nanoparticle::~Nanoparticle(){ //destructor of the class (useful for heritage)
 
   }
 //};
 
 
 //class nano::Maille{
-  Maille::Maille(string filename){
-    if (open_file(filename)){
+  Maille::Maille(string filename){ //create the maille with the file initial
+    if (open_file(filename)){//try to open the file
       ifstream file(filename);
       string line;
       getline(file, line);
-      N_atoms=stof(line);
+      N_atoms=stof(line); //attribute the number of the file
       nvois=vector<int>(N_atoms,0);
       ivois=vector<vector<int>>(N_atoms,vector<int>(0,0));
-      energy_atoms=vector<float>(N_atoms,0);
+      energy_atoms=vector<float>(N_atoms,0); //initialize vectors to ease the program
       getline(file, line);
-      boxe.setDimension(line);
-      while(getline(file,line)){
+      boxe.setDimension(line); //initialize the boxe of the maille
+      while(getline(file,line)){ //read the file line by line
         Nanoparticle particle;
         particle.set_param(line);
-        maille.push_back(particle);
+        maille.push_back(particle); //push the particle corresponding to the line
       }
       file.close();
     }
-    else{
-      cerr<<"failed to open the file "<<filename;
+    else{ //if the file cannot be open return an error
+      cerr<<"failed to open the file "<<filename<<" in order to create the system (maille)";
     }
 
   }
 
-  float Maille::energy(){
+  float Maille::energy(){ //calcul the energy of the maille
     float energy_total=0.;
     for(int i=0;i<N_atoms;i++){
       if(maille[i].getKind()==impurity){
@@ -353,7 +371,7 @@ float Monte_Carlo(Maille& maille){
     return energy_total;
   }
 
-  void Maille::voisin(){
+  void Maille::voisin(){ //will make nvois and ivois
     for(int i=0;i<N_atoms-1;i++){
       for(int j=i+1;j<N_atoms;j++){
         //preparation of the limit conditions :--------------------------------------------
@@ -384,6 +402,7 @@ float Monte_Carlo(Maille& maille){
         }
         //calcul and verification if i is neighbor of j:
         if(distance(xij,yij,zij)<dcut){
+          //if it is the case put the information in the vector ivois and nvois
           nvois[i]=nvois[i]+1;
           nvois[j]=nvois[j]+1;
           ivois[i].push_back(j);
@@ -393,7 +412,7 @@ float Monte_Carlo(Maille& maille){
     }
   }
 
-  void Maille::write_parameters(string filename,int pas){
+  void Maille::write_parameters(string filename,int pas){ //will wirte parameters in the file
     if(pas%npw==0){
       ofstream params(filename);
       params<<N_atoms<<endl;
@@ -404,36 +423,38 @@ float Monte_Carlo(Maille& maille){
       params.close();
     }
   }
-
-  vector<vector<int>> Maille::getIVois(){
+  //FUNCTIONS THAT MUST BE CONST
+  vector<vector<int>> Maille::getIVois(){ //will return ivois
     return ivois;
   }
 
-  vector<Nanoparticle> Maille::getMaille(){
+  vector<Nanoparticle> Maille::getMaille(){ //will return maille
     return maille;
   }
 
-  void Maille::changeParticle(int site,string new_kind){
-    maille[site].change_type(new_kind);
-  }
 
-  Nanoparticle Maille::getParticle(int position){
+  Nanoparticle Maille::getParticle(int position){ //will return particle of the site position
     return maille[position];
   }
 
-  float Maille::getNumberOfAtoms(){
+  float Maille::getNumberOfAtoms(){ //return the number of atoms in the maille
     return N_atoms;
   }
 
-  vector<int> Maille::getNVois(){
+  vector<int> Maille::getNVois(){ //return number of voisin
     return nvois;
   }
 
-  Boxe Maille::getBoxe(){
+  Boxe Maille::getBoxe(){ //return the boxe of the maille
     return boxe;
   }
+  //END of the const functions
 
-  Maille::~Maille(){
+  void Maille::changeParticle(int site,string new_kind){ //will change the particle of the site i to the new kind
+    maille[site].change_type(new_kind);
+  }
+
+  Maille::~Maille(){ //destructor of the maille
 
   }
 //};
