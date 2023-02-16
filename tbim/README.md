@@ -1,6 +1,6 @@
 ## README pour le programme TBIM:
 
-#Probleme 1 : on trouve 17 atomes pour chaque voisins T_T (Résolu)
+# Probleme 1 : on trouve 17 atomes pour chaque voisins T_T (Résolu)
 
 Probleme 1 : on trouve 17 atomes pour chaque voisins T_T
 <br />
@@ -10,7 +10,7 @@ Si le rayon de coupure se situe juste après les 1ers voisins il devrait y en av
 <br />
 
 
-#Problem 2 :<br />
+# Problem 2 :<br />
 <br />
 Lors de multiple simulation, on a 1 seul atome d'argent qui s'incruste (40 et 100 iterations).<br />
 Tester avec Cu-Ag et Cu-Ni
