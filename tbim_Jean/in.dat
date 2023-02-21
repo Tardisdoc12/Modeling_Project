@@ -1,0 +1,15 @@
+fichier des parametres :
+1000            npas
+10		          npw	(npas > 20*npw)
+1000000.        temp
+0.5             dmu
+50              idmumax
+0.02	          ddmu
+6               imax
+6               jmax
+6	 			        kmax
+0               iconf = 0 (construction du slab) sinon lecture "p.in"
+12682319        irand
+Cu              élément de base
+Ag              élément introduit
+Null            élément introduit #2 (facultatif si aucun mettre Null)
