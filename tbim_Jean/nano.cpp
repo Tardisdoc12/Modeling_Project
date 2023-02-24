@@ -173,6 +173,7 @@ int mc_exchange(Maille& maille,int ipas){
   srand (time(NULL));
   //our initial energy--------------------------------------------------------------------------------
   int n_impu=0;
+  int Var=0;
   int Natom_tot=maille.getNumberOfAtoms();
   int Natom_base=maille.getNumberOfAtoms();
   //we are going to keep data about energy in this vector:
@@ -181,46 +182,57 @@ int mc_exchange(Maille& maille,int ipas){
   for(int times=0;times<Natom_tot;times++){
     //saving before exchange:
     copy(energy_atoms.begin(), energy_atoms.end(), energy_atom0.begin());
-      //random atom to pick
+    //random atom to pick
     int rand_atom=randomf(Natom_tot-1);
     string save_type=maille.getParticleKind(rand_atom);
+    Maille Ancienne_Maille=maille;
 
-    //modification of the kind of atom random
-    int rand_modif=randomf(2);
-    if (rand_modif==0){
-      rand_modif+=1;
-    }
-    if(rand_modif==1){
-      maille.changeParticle(rand_atom,system_1.getImpurityName());
-    }
-    else{
-      if(system_2.getImpurityName()!="Null"){
-        maille.changeParticle(rand_atom,system_2.getImpurityName());
+    if(maille.getParticleKind(rand_atom)==system_1.getBaseName()){
+      Var=-1;
+      n_impu++;
+      int rand_modif=randomf(2);
+      if (rand_modif==0){
+        rand_modif+=1;
       }
-      else{
+      if(rand_modif==1){
         maille.changeParticle(rand_atom,system_1.getImpurityName());
       }
+      else{
+        if(system_2.getImpurityName()!="Null"){
+          maille.changeParticle(rand_atom,system_2.getImpurityName());
+        }
+        else{
+          maille.changeParticle(rand_atom,system_1.getImpurityName());
+        }
+      }
+      //---------------------------------------
     }
-    //---------------------------------------
-
-    Natom_base--;
-    n_impu++;
-
+    else if(maille.getParticleKind(rand_atom)==system_1.getImpurityName()){
+      Var=1;
+      maille.changeParticle(rand_atom,system_1.getBaseName());
+    }
+    //modification of the kind of atom random
+    cout<<save_type<<" devient "<<maille.getParticleKind(rand_atom)<<" pour l'indice "<<rand_atom<<endl;
     //calculate the new energy
     float ener_new=energy(maille);
-    float ener_0=0;
-    for(int i=0;i<energy_atom0.size();i++){
-      ener_0+=energy_atom0[i];
-    }
-    
+    float ener_0=energy(Ancienne_Maille);
+
     //calculate (thanks to boltzman term compared to a random number)
-    float de = ener_new-ener_0+Natom_base*dmu;
+    float de = ener_new;
+    cout<<"l'energie nouvelle vaut ="<<de<<endl;
+    cout<<"l'ancienne energie vaut ="<<ener_0<<endl;
+    de-=ener_0;
+    de+=Var*dmu;
+    cout<<"DE="<<de<<endl;
     if(de<=0){
       continue;
     }
     float boltzman = exp(-de/(cbol*temp));
     float p=(randomf(RAND_MAX))/(float) RAND_MAX;
+    cout<<"Boltzman vaut ="<<boltzman<<endl;
+    cout<<"p="<<p<<endl;
     if(p<boltzman){
+      //cout<<"configuration accepté"<<endl;
       continue;
     }
     //we wait for an equilibrium of the system than start to count how many impurities were rejected
@@ -229,7 +241,7 @@ int mc_exchange(Maille& maille,int ipas){
     }
     //we return to the previous state
     copy(energy_atom0.begin(), energy_atom0.end(), energy_atoms.begin());
-    Natom_base++;
+    Var=0;
     n_impu--;
     maille.changeParticle(rand_atom,save_type);
   }
@@ -239,6 +251,7 @@ int mc_exchange(Maille& maille,int ipas){
 float Monte_Carlo(Maille& maille){ //make the monte carlo algorithm
   for(int pas=0;pas<npas;pas++){ //start the algorithm
     int N_atom1=mc_exchange(maille,pas); //exchange atoms
+    cout<<"on est au pas="<<pas<<endl;
     if(pas>npeq){
       //Calculs about the energy of the exchange----
       float energy_total = energy(maille); //calcul the energy
@@ -246,6 +259,9 @@ float Monte_Carlo(Maille& maille){ //make the monte carlo algorithm
       c2sum=c2sum+(1-N_atom1/maille.getNumberOfAtoms()); //final concentration
       //Writing into the file for some configurations
       c2mean=c2sum/(float) (pas-npeq);
+    }
+    if(pas==npas-1){
+      cout<<"fini"<<endl;
     }
   }
   return energy_sum;
