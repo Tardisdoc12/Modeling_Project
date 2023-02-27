@@ -24,6 +24,30 @@ namespace nano{
   //split a string by spaces-----------------
   vector<string> split(const string com);
 
+
+  //class System------------------------------
+  class System{
+  private:
+    float EnergyCohesion1,EnergyCohesion2;
+    float V,Tau;
+    string baseName;
+    string ImpurityName;
+  public:
+    System();
+
+    void setParameters(string base,string impurity);
+
+    const float getTau();
+
+    const float getPotential();
+
+    const string getImpurityName();
+
+    const string getBaseName();
+
+    ~System();
+  };
+
   //construction of all parameters (Needed for starting calcul)-----------
   void initialize(string filename);
 
@@ -46,6 +70,7 @@ namespace nano{
     float ecoh; //=0.55/12.;
     float x,y,z;
     string kind;
+    string type_vois;
   public:
     //creator---------------------------------
     Nanoparticle();
@@ -60,14 +85,17 @@ namespace nano{
     void change_type(string new_type);
 
     //return the kind of the particle:---------
-    string getKind();
+    const string getKind();
+
+    //
+    const string getType_vois();
 
     //Destructor------------------------------
     ~Nanoparticle();
   };
 
   //Classe boxe (limit conditions)------------
-  class Boxe{
+  /*class Boxe{
     private :
     float x,y,z;
     public :
@@ -84,7 +112,7 @@ namespace nano{
     //Destructor------------------------------
     ~Boxe();
 
-  };
+  };*/
 
   //Classe Maille-----------------------------
   class Maille{
@@ -92,21 +120,18 @@ namespace nano{
     vector<Nanoparticle> maille;
     vector<int> nvois;
     vector<vector<int>> ivois;
-    Boxe boxe;
+    //Boxe boxe;
     float N_atoms;
     vector<float> energy_atoms;
   public:
     //creation de la structure ----------------
     Maille(string filename);
 
-    //calcul of the energy of the maille :-----
-    float energy();
-
     //create vectors ivois and nvois :---------
     void voisin();
 
     //return of ivois
-    vector<vector<int>> getIVois();
+    const vector<vector<int>> getIVois();
 
     //change the kind of particle i :----------
     void changeParticle(int site,string new_kind);
@@ -115,29 +140,58 @@ namespace nano{
     void write_parameters(string filename,int pas);
 
     //return the entire maille-----------------
-    vector<Nanoparticle> getMaille();
+    const vector<Nanoparticle> getMaille();
 
     //return a nanoparticle of the maille------
-    Nanoparticle getParticle(int position);
+    const Nanoparticle getParticle(int position);
 
     //return of nvois
-    vector<int> getNVois();
+    const vector<int> getNVois();
 
     //return the number of atom in the maille--
-    float getNumberOfAtoms();
+    const float getNumberOfAtoms();
 
     //return the boxe of the maille :
-    Boxe getBoxe();
+    //const Boxe getBoxe();
+
+    //return the kind of the particle i :------
+    const string getParticleKind(int sitePosition);
+
+    //return the type of particuke(its placement in the maille) depending on the number of neighbours it has
+    const string getParticleType(int sitePosition);
+
+    //surcharge de l'operateur = :-------------
+    Maille operator=(const Maille& source);
 
     //Destructor-------------------------------
     ~Maille();
   };
+
+  //calcul the energy of the maille
+  float energy(Maille& maille);
 
   //change an atom of the maille in the impurity :
   int mc_exchange(Maille& maille,int ipas);
 
   //Monte Carlo of a maille (maybe to put in class maille)---------
   float Monte_Carlo(Maille& maille);
+
+  void DoMonteCarlo(Maille& maille);
+
+  //clear the vector of all types of  concentration so there won't be overwritting
+  void clear_vect(vector<float> vect);
+
+  //write in a file one concentration
+  void writeConcen(string path,float concen);
+
+  //creates all the concentrations files where we write the concentration of all types of particule
+  void create_concen_files(string directory);
+
+  //write the concentration for all type of particules
+  void write_all(string directory);
+
+  //determines the concentration for each type of particule(surface, heart..)
+  void concen_neighbor(Maille maille);
 
 }
 #endif
