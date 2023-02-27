@@ -6,6 +6,6 @@ using namespace nano;
 int main(){
   Maille maille("./init.dat"); //on créé la maille qui est notre system
   initialize("./in.dat"); //on initialise les paramètres
-  Monte_Carlo(maille);
+  DoMonteCarlo(maille);
   return 0;
 }

@@ -28,9 +28,6 @@ string creates_directory(string name){ //create a directory with the given name
   return name+"-"+date;
 }
 
-
-
-
 namespace nano{ //namespace to ease the use for people
   namespace{ //anonymous namespace to protect the different parameters
     /*
@@ -53,17 +50,18 @@ namespace nano{ //namespace to ease the use for people
     */
     float dcut=1/sqrt(2)+0.001;
     float energy_sum;
-    float c2sum;
-    int rejected=0;
+    vector<float> c2sumvect(5,0.);//vector of concentration of all 5 type of particle (surface,heart..)
+    vector<string> type_nano{"6","7","8","9","12"};//vector containing the type of the atoms depending on their positions
+    int rejected=0;//number of impurities rejected when
     float temp,dmu,ddmu;
     int npas,npw,imax,jmax,kmax,npeq,idmumax,iconf,irand;
     vector<float> energy_atoms;
-    float cbol=8.62e-5;
+    float cbol=8.62*pow(10,-5);
+    //float cbol=1.2*pow(10,-23);
     bool verification_initialized=false;
-    string impurity;
     string base;
-    float V;
-    float Tau;
+    string impurity;
+    float V;float Tau;
   }
 
 
@@ -107,40 +105,39 @@ void initialize(string filename){ //initialize all the parameters, it is mandato
   verification_initialized=true; //to let all function runs after!
   cout<<"Parameters loaded.\n Loading of V and Tau..."<<endl;
   //properties of the system :
-  //potential V
-  if(!open_file("../properties/systems.dat")){
-    cerr<<"IMPORTANT ERROR : File \"systems.dat\" not found!"; //file not found throw an error
-  }
-  else{
-    impurity=elements[12];base=elements[11];
-    ifstream file("../properties/systems.dat");
-    string line;
-    string system=base+"-"+impurity;
-    vector<string> datas;
-    while(getline(file,line)){ //reading the file and we attribute the potential and tau
-      datas=split(line);
-      if(datas[0]==system){
-        V=stof(datas[1]);
-      }
-    }
-    file.close();
-  }
-  //Tau
-  if(!open_file("../properties/elements.dat")){
-    cerr<<"IMPORTANT ERROR : File \"elements.dat\" not find! Please verify the existence of the file!";
-  }
-  else{
-    ifstream elem("../properties/elements.dat");
+  impurity=elements[12];base=elements[11];
+  /*system_1.setParameters(base,impurity);
+  if(impurity2!="Null"){
+    system_2.setParameters(base,impurity2);
+  }*/
+  string fileName="../properties/elements.dat";
+  if(open_file(fileName)){
+    ifstream Element(fileName);
+    string Line;
     vector<string> element;
-    string line;
-    while(getline(elem,line)){
-      element=split(line);
-      if((element[0]==base)||(element[0]==impurity)){
+    while(getline(Element,Line)){
+      element=split(Line);
+      if(element[0]==base){
         Tau=Tau+stof(element[2]);
+      }
+      else if(element[0]==impurity){
+        Tau=Tau-stof(element[2]);
       }
     }
     Tau=Tau/12.;
-    elem.close();
+  }
+  //For system :----------------------------------------
+  string filename2="../properties/systems.dat";
+  if(open_file(filename2)){
+    ifstream file(filename2);
+    //for system:
+    string line;
+    while(getline(file,line)){
+      vector<string> sys=split(line);
+      if((base+"-"+impurity==sys[0])||(impurity+"-"+base==sys[0])){
+        V=stof(sys[1]);
+      }
+    }
   }
   cout<<"End of loading V and Tau."<<endl;
 }
@@ -154,7 +151,6 @@ vector<string> split(const string com){ //split a string by space
 }
 
 int randomf(int range){ //return a random number
-  srand (time(NULL));
   return rand()%range;
 }
 
@@ -173,33 +169,73 @@ double distance(float xij,float yij, float zij){
   return dist;
 }
 
-int mc_exchange(Maille& maille,int ipas){ //exchange particles and calcul the new energy
+float energy(Maille& maille){
+  float energy_total=0;
+  for(int i=0;i<maille.getNumberOfAtoms();i++){
+    if(maille.getParticleKind(i)==impurity){
+      for(int j=0;j<maille.getNVois()[i];j++){
+        int voisin_k=maille.getIVois()[i][j];
+        if(maille.getParticleKind(voisin_k)==impurity){
+          energy_atoms[i]=energy_atoms[i]+V;
+        }
+      }
+      energy_atoms[i]=energy_atoms[i]+maille.getNVois()[i]*(Tau-V);
+    }
+    energy_total=energy_total+energy_atoms[i];
+  }
+  clear_vect(energy_atoms);
+  return energy_total;
+}
+
+//exchange particles and calcul the new energy
+int mc_exchange(Maille& maille,int ipas){
+  srand (time(NULL));
   //our initial energy--------------------------------------------------------------------------------
   int n_impu=0;
+  int Var=0;
   int Natom_tot=maille.getNumberOfAtoms();
   int Natom_base=maille.getNumberOfAtoms();
-  //we are keeping data about energy
-  vector<float> energy_atom0;
-  copy(energy_atoms.begin(), energy_atoms.end(), energy_atom0.begin());
-
+  float ener_0=0;
+  //we are going to keep data about energy in this vector:
+  vector<float> energy_atom0=vector<float>(maille.getNumberOfAtoms(),0);
   //-------------------------------------------------------------------------------------------------
   for(int times=0;times<Natom_tot;times++){
+    //saving before exchange:
+    copy(energy_atoms.begin(), energy_atoms.end(), energy_atom0.begin());
     //random atom to pick
     int rand_atom=randomf(Natom_tot-1);
-    string save_type=maille.getParticle(rand_atom).getKind();
-    maille.changeParticle(rand_atom,impurity);
-    Natom_base--;
-    n_impu--;
+    string save_type=maille.getParticleKind(rand_atom);
+    ener_0=energy(maille);
+    if(save_type!=impurity){
+      Var=-1;
+      n_impu++;
+      maille.changeParticle(rand_atom,impurity);
+    }
+    else{
+      Var=1;
+      n_impu--;
+      maille.changeParticle(rand_atom,base);
+    }
+    //---------------------------------------
+    //modification of the kind of atom random
+    //cout<<save_type<<" devient "<<maille.getParticleKind(rand_atom)<<" pour l'indice "<<rand_atom<<endl;
     //calculate the new energy
-    float ener_new=maille.energy();
+    float ener_new=energy(maille);
     //calculate (thanks to boltzman term compared to a random number)
-    float de = ener_new+Natom_base*dmu;
+    float de = ener_new;
+    //cout<<"l'energie nouvelle vaut ="<<de<<endl;
+    //cout<<"l'ancienne energie vaut ="<<ener_0<<endl;
+    de-=ener_0;
+    de+=Var*dmu;
+    //cout<<"DE="<<de<<endl;
     if(de<=0){
       continue;
     }
     float boltzman = exp(-de/(cbol*temp));
-    float p=randomf(RAND_MAX)/(float) RAND_MAX;
-    if(p>boltzman){
+    float p=(randomf(RAND_MAX))/(float) RAND_MAX;
+    //cout<<"Boltzman vaut ="<<boltzman<<endl;
+    //cout<<"p="<<p<<endl;
+    if(p<boltzman){
       continue;
     }
     //we wait for an equilibrium of the system than start to count how many impurities were rejected
@@ -208,39 +244,122 @@ int mc_exchange(Maille& maille,int ipas){ //exchange particles and calcul the ne
     }
     //we return to the previous state
     copy(energy_atom0.begin(), energy_atom0.end(), energy_atoms.begin());
-    maille.getParticle(rand_atom).change_type(save_type);
+    Var=0;
+    if(save_type==base){
+      n_impu--;
+    }
+    else{
+      n_impu++;
+    }
+    maille.changeParticle(rand_atom,save_type);
   }
   return Natom_base;
 }
 
-float Monte_Carlo(Maille& maille){ //make the monte carlo algorithm
-  string Directory_name="Simulation";
-  string dir=creates_directory(Directory_name); //create the directory fo the simulation
-  maille.voisin(); //create the ivois and nvois of the maille
-  if(!verification_initialized){ //verify that all parameters are initialize and throw an error if not!
-    cerr<<"Error : parameters not initialized! Please use the function nano::initialize(string filename) to initialize them!";
+ void concen_neighbor(Maille maille){
+  vector<int> Nimpu_vect(5,0);
+  vector<int> Nbase_vect(5,0);
+  for(int i=0;i<405;i++){
+    for(int j=0;j<type_nano.size();j++){
+      if(maille.getParticleType(i)==type_nano[j]){
+        cout<<maille.getParticleType(i)<<endl;
+        if(maille.getParticleKind(i)==impurity){
+          Nimpu_vect[j]+=Nimpu_vect[j];
+        }
+        else{
+          Nbase_vect[j]+=Nbase_vect[j];
+        }
+      }
+    }
   }
+  cout<<"base"<<Nbase_vect[2]<<endl;
+  for(int j=0;j<type_nano.size();j++){
+    c2sumvect[j]=(float)Nimpu_vect[j]/(float)(Nimpu_vect[j]+Nbase_vect[j]);
+  }
+}
+
+void clear_vect(vector<float> vect){
+  for(int i=0;i<vect.size();i++){
+    vect[i]=0.;
+  }
+}
+
+
+float Monte_Carlo(Maille& maille){ //make the monte carlo algorithm
+  cout<<"je fais le monte"<<endl;
   for(int pas=0;pas<npas;pas++){ //start the algorithm
+    cout<<"on est au pas="<<pas<<endl;
     int N_atom1=mc_exchange(maille,pas); //exchange atoms
     if(pas>npeq){
       //Calculs about the energy of the exchange----
-      float energy_total = maille.energy(); //calcul the energy
+      float energy_total = energy(maille); //calcul the energy
       energy_sum=energy_sum+energy_total; //energy final
-      c2sum=c2sum+(1-N_atom1/maille.getNumberOfAtoms()); //final concentration
       //Writing into the file for some configurations
-      string filename=name_file(pas);
-      string path="./"+dir+"/"+filename;
-      maille.write_parameters(path,pas); //write the configuration in a file which is in the directory!
+    }
+    if(pas==npas-1){
+      cout<<"fini"<<endl;
+      concen_neighbor(maille);
+      cout<<"calculation of the concentrations..."<<endl;
     }
   }
   return energy_sum;
 }
 //end of functions in nano------------------------------------
 
+//function to write parameters and to do all loops of monte carlo :
+void DoMonteCarlo(Maille& maille){
+  energy_atoms=vector<float>(maille.getNumberOfAtoms(),0); //initialize vectors to ease the program
+  string Directory_name="Simulation_TOh_405_";
+  string dir=creates_directory(Directory_name);
+  create_concen_files(dir);//creates the concentration files
+  maille.voisin();//create the ivois and nvois of the maille
+  cout<<"voisin_done"<<endl;
+  if(!verification_initialized){ //verify that all parameters are initialize and throw an error if not!
+    cerr<<"Error : parameters not initialized! Please use the function nano::initialize(string filename) to initialize them!";
+  }
+  Maille maille_work=maille;
+  for(int pasMu=0;pasMu<idmumax;pasMu++){
+    //Maille maille_work=maille;
+    cout<<"On exectute le monte carlo pour la boucle dmu="<<dmu<<endl;
+    float energy=Monte_Carlo(maille_work);
+    cout<<"On a fini le monte carlo pour dmu="<<dmu<<endl;
+    string filename=name_file(pasMu);
+    string path="./"+dir+"/"+filename;
+    cout<<"On écrit les paramètres!"<<endl;
+    maille_work.write_parameters(path,pasMu);//write the configuration in a file which is in the directory!
+    write_all(dir);//write in all the concentration files
+    cout<<"writing concentrations..."<<endl;
+    clear_vect(c2sumvect);//clear the concentration vector so there is not overwritting
+    dmu=dmu+ddmu;
+    cout<<endl;
+  }
+
+}
+
+void writeConcen(string path,float concen){
+  ofstream file(path,ios::in|ios::ate|ios::out);
+  file<<dmu<<"\t"<<concen<<endl;
+  file.close();
+}
+
+void write_all(string directory){
+  for(int j=0;j<type_nano.size();j++){
+    writeConcen("./"+directory+"/concentration"+type_nano[j]+".dat",c2sumvect[j]);
+  }
+}
+
+void create_concen_files(string directory){
+  for(int j=0;j<type_nano.size();j++){
+    string path2="./"+directory+"/concentration"+type_nano[j]+".dat";
+    if(open_file(path2)){
+      cerr<<"ERROR : FILE already exist please be sure of the name fileERROR : FILE already exist please be sure of the name file";
+    }
+  }
+}
 
 
 //class Boxe{
-  Boxe::Boxe(){ //new class (new kind of variables like int, double etc...)
+  /*Boxe::Boxe(){ //new class (new kind of variables like int, double etc...)
     x=0;y=0;z=0;
   }
 
@@ -257,7 +376,7 @@ float Monte_Carlo(Maille& maille){ //make the monte carlo algorithm
 
   Boxe::~Boxe(){ //destructor (useless here but can be usefull if we make inherit a new class)!
 
-  }
+  }*/
 //};
 
 
@@ -272,6 +391,7 @@ float Monte_Carlo(Maille& maille){ //make the monte carlo algorithm
     vector<string> true_sous_maille=split(line); //split the string to have the kind,x,y,z separate in a vector
     true_sous_maille.erase(true_sous_maille.begin()); // erase the first term that will be a space
     kind=true_sous_maille[0]; //attribute the different variables
+    type_vois=true_sous_maille[4];
     x=stof(true_sous_maille[1]);y=stof(true_sous_maille[2]);z=stof(true_sous_maille[3]);
     if(!open_file("../properties/elements.dat")){ //will test to open the file for the properties of the kind of the nanoparticles
       cerr<<"IMPORTANT ERROR : File \"elements.dat\" not find! Please verify the existence of the file!";
@@ -296,8 +416,12 @@ float Monte_Carlo(Maille& maille){ //make the monte carlo algorithm
     return position;
   }
 
-  string Nanoparticle::getKind(){//will return the kind (const)
+  const string Nanoparticle::getKind(){//will return the kind (const)
     return kind;
+  }
+
+  const string Nanoparticle::getType_vois(){//will return the type depending on the number of neighbours
+    return type_vois;
   }
 
   void Nanoparticle::change_type(string new_type){ //will change the type of the variable
@@ -336,9 +460,8 @@ float Monte_Carlo(Maille& maille){ //make the monte carlo algorithm
       N_atoms=stof(line); //attribute the number of the file
       nvois=vector<int>(N_atoms,0);
       ivois=vector<vector<int>>(N_atoms,vector<int>(0,0));
-      energy_atoms=vector<float>(N_atoms,0); //initialize vectors to ease the program
       getline(file, line);
-      boxe.setDimension(line); //initialize the boxe of the maille
+      //boxe.setDimension(line); //initialize the boxe of the maille
       while(getline(file,line)){ //read the file line by line
         Nanoparticle particle;
         particle.set_param(line);
@@ -352,23 +475,6 @@ float Monte_Carlo(Maille& maille){ //make the monte carlo algorithm
 
   }
 
-  float Maille::energy(){ //calcul the energy of the maille
-    float energy_total=0.;
-    for(int i=0;i<N_atoms;i++){
-      if(maille[i].getKind()==impurity){
-        for(int j=0;j<nvois[i];j++){
-          int voisin_k=ivois[i][j];
-          if(maille[voisin_k].getKind()==impurity){
-            energy_atoms[i]=energy_atoms[i]+V;
-          }
-        }
-        energy_atoms[i]=energy_atoms[i]+nvois[i]*(Tau-V);
-      }
-      energy_total=energy_total+energy_atoms[i];
-    }
-    return energy_total;
-  }
-
   void Maille::voisin(){ //will make nvois and ivois
     for(int i=0;i<N_atoms-1;i++){
       for(int j=i+1;j<N_atoms;j++){
@@ -376,7 +482,7 @@ float Monte_Carlo(Maille& maille){ //make the monte carlo algorithm
         float xij=maille[j].position()[0]-maille[i].position()[0];
         float yij=maille[j].position()[1]-maille[i].position()[1];
         float zij=maille[j].position()[2]-maille[i].position()[2];
-        float boxe_x=boxe.getDimension()[0];
+        /*float boxe_x=boxe.getDimension()[0];
         float boxe_y=boxe.getDimension()[1];
         float boxe_z=boxe.getDimension()[2];
         //Limit conditions :----------------------------------------------------------------
@@ -397,7 +503,7 @@ float Monte_Carlo(Maille& maille){ //make the monte carlo algorithm
         }
         if(abs(zij-boxe_z)<abs(zij)){
           zij=zij-boxe_z;
-        }
+        }*/
         //calcul and verification if i is neighbor of j:
         if(distance(xij,yij,zij)<dcut){
           //if it is the case put the information in the vector ivois and nvois
@@ -412,40 +518,47 @@ float Monte_Carlo(Maille& maille){ //make the monte carlo algorithm
 
   void Maille::write_parameters(string filename,int pas){ //will wirte parameters in the file
     float maille_parameter=3.62;
-    if(pas%npw==0){
-      ofstream params(filename);
-      params<<N_atoms<<endl;
-      params<<boxe.getDimension()[0]<<" "<<boxe.getDimension()[1]<<" "<<boxe.getDimension()[2]<<endl;
-      for(int indi=0;indi<maille.size();indi++){
-        params<<maille[indi].getKind()<<" "<<maille[indi].position()[0]*maille_parameter<<" "<<maille[indi].position()[1]*maille_parameter<<" "<<maille[indi].position()[2]*maille_parameter<<endl;
-      }
-      params.close();
+    //cout<<"on a écrit dans un fichier la configuration!"<<endl;
+    ofstream params(filename);
+    params<<N_atoms<<endl;
+    //params<<boxe.getDimension()[0]<<" "<<boxe.getDimension()[1]<<" "<<boxe.getDimension()[2]<<endl;
+    for(int indi=0;indi<maille.size();indi++){
+      params<<maille[indi].getKind()<<" "<<maille[indi].position()[0]*maille_parameter<<" "<<maille[indi].position()[1]*maille_parameter<<" "<<maille[indi].position()[2]*maille_parameter<<" "<<maille[indi].getType_vois()<<endl;
     }
+    params.close();
   }
+
   //FUNCTIONS THAT MUST BE CONST
-  vector<vector<int>> Maille::getIVois(){ //will return ivois
+  const vector<vector<int>> Maille::getIVois(){ //will return ivois
     return ivois;
   }
 
-  vector<Nanoparticle> Maille::getMaille(){ //will return maille
+  const vector<Nanoparticle> Maille::getMaille(){ //will return maille
     return maille;
   }
 
-
-  Nanoparticle Maille::getParticle(int position){ //will return particle of the site position
+  const Nanoparticle Maille::getParticle(int position){ //will return particle of the site position
     return maille[position];
   }
 
-  float Maille::getNumberOfAtoms(){ //return the number of atoms in the maille
+  const float Maille::getNumberOfAtoms(){ //return the number of atoms in the maille
     return N_atoms;
   }
 
-  vector<int> Maille::getNVois(){ //return number of voisin
+  const vector<int> Maille::getNVois(){ //return number of voisin
     return nvois;
   }
 
-  Boxe Maille::getBoxe(){ //return the boxe of the maille
+  /*const Boxe Maille::getBoxe(){ //return the boxe of the maille
     return boxe;
+  }*/
+
+  const string Maille::getParticleKind(int sitePosition){
+    return maille[sitePosition].getKind();
+  }
+
+  const string Maille::getParticleType(int sitePosition){
+    return maille[sitePosition].getType_vois();
   }
   //END of the const functions
 
@@ -453,8 +566,17 @@ float Monte_Carlo(Maille& maille){ //make the monte carlo algorithm
     maille[site].change_type(new_kind);
   }
 
-  Maille::~Maille(){ //destructor of the maille
+  Maille Maille::operator=(const Maille& source){
+    // Construit une copie temporaire de la source :
+    Maille Temp(source);
+    // Échange le contenu de cette copie avec l'objet courant :
+    swap(Temp,*this);
+    // Renvoie l'objet courant (modifié) et détruit les données
+    // de la variable temporaire (contenant les anciennes données) :
+    return *this;
+  }
 
+  Maille::~Maille(){ //destructor of the maille
+    }
   }
 //};
-};
