@@ -287,9 +287,7 @@ float Monte_Carlo(Maille& maille){ //make the monte carlo algorithm
   for(int pas=0;pas<npas;pas++){ //start the algorithm
     int N_atom1=mc_exchange(maille,pas); //exchange atoms
     if(pas>npeq){
-      //Calculs about the energy of the exchange----
-      float energy_total = energy(maille); //calcul the energy
-      energy_sum=energy_sum+energy_total; //energy final
+      //Calcul concentration
       c2sum=c2sum+(1-N_atom1/maille.getNumberOfAtoms()); //final concentration
       //Writing into the file for some configurations
       c2mean=maille.NumberofImpurity(system_1)/maille.getNumberOfAtoms();
