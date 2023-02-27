@@ -1,13 +1,13 @@
 fichier des parametres :
 100             npas
-4		            npw	(npas > 20*npw)
+4 		          npw	(npas > 20*npw)
 4000.           temp
-0.55            dmu
-50              idmumax
-0.02	          ddmu
-6               imax
-6               jmax
-6	 			        kmax
+0.4             dmu
+20              idmumax
+0.01	          ddmu
+3               imax
+3               jmax
+3	 			        kmax
 0               iconf = 0 (construction du slab) sinon lecture "p.in"
 12682319        irand
 Cu              élément de base

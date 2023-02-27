@@ -28,6 +28,12 @@ string creates_directory(string name){ //create a directory with the given name
   return name+"-"+date;
 }
 
+void clear_vector(vector<float>& vect){
+  int size=vect.size();
+  vect=vector<float>(size,0);
+}
+
+
 namespace nano{ //namespace to ease the use for people
   namespace{ //anonymous namespace to protect the different parameters
     /*
@@ -152,19 +158,12 @@ float energy(Maille& maille){
           energy_atoms[i]=energy_atoms[i]+system_1.getPotential();
         }
       }
+      //cout<<"Potentiel ="<<system_1.getPotential()<<" Et Tau="<<system_1.getTau()<<endl;
       energy_atoms[i]=energy_atoms[i]+maille.getNVois()[i]*(system_1.getTau()-system_1.getPotential());
-    }
-    if(maille.getParticleKind(i)==system_2.getImpurityName()){
-      for(int j=0;j<maille.getNVois()[i];j++){
-        int voisin_k=maille.getIVois()[i][j];
-        if(maille.getParticleKind(voisin_k)==system_2.getImpurityName()){
-          energy_atoms[i]=energy_atoms[i]+system_2.getPotential();
-        }
-      }
-      energy_atoms[i]=energy_atoms[i]+maille.getNVois()[i]*(system_2.getTau()-system_2.getPotential());
     }
     energy_total=energy_total+energy_atoms[i];
   }
+  clear_vector(energy_atoms);
   return energy_total;
 }
 
@@ -176,16 +175,18 @@ int mc_exchange(Maille& maille,int ipas){
   int Var=0;
   int Natom_tot=maille.getNumberOfAtoms();
   int Natom_base=maille.getNumberOfAtoms();
+  float ener_0=0;
   //we are going to keep data about energy in this vector:
   vector<float> energy_atom0=vector<float>(maille.getNumberOfAtoms(),0);
   //-------------------------------------------------------------------------------------------------
   for(int times=0;times<Natom_tot;times++){
     //saving before exchange:
-    copy(energy_atoms.begin(), energy_atoms.end(), energy_atom0.begin());
+    //copy(energy_atoms.begin(), energy_atoms.end(), energy_atom0.begin());
     //random atom to pick
     int rand_atom=randomf(Natom_tot-1);
     string save_type=maille.getParticleKind(rand_atom);
-    Maille Ancienne_Maille=maille;
+
+    ener_0=energy(maille);
 
     if(maille.getParticleKind(rand_atom)==system_1.getBaseName()){
       Var=-1;
@@ -209,30 +210,25 @@ int mc_exchange(Maille& maille,int ipas){
     }
     else if(maille.getParticleKind(rand_atom)==system_1.getImpurityName()){
       Var=1;
+      n_impu--;
       maille.changeParticle(rand_atom,system_1.getBaseName());
     }
     //modification of the kind of atom random
-    cout<<save_type<<" devient "<<maille.getParticleKind(rand_atom)<<" pour l'indice "<<rand_atom<<endl;
+
     //calculate the new energy
     float ener_new=energy(maille);
-    float ener_0=energy(Ancienne_Maille);
 
     //calculate (thanks to boltzman term compared to a random number)
     float de = ener_new;
-    cout<<"l'energie nouvelle vaut ="<<de<<endl;
-    cout<<"l'ancienne energie vaut ="<<ener_0<<endl;
     de-=ener_0;
     de+=Var*dmu;
-    cout<<"DE="<<de<<endl;
     if(de<=0){
       continue;
     }
+
     float boltzman = exp(-de/(cbol*temp));
     float p=(randomf(RAND_MAX))/(float) RAND_MAX;
-    cout<<"Boltzman vaut ="<<boltzman<<endl;
-    cout<<"p="<<p<<endl;
     if(p<boltzman){
-      //cout<<"configuration accepté"<<endl;
       continue;
     }
     //we wait for an equilibrium of the system than start to count how many impurities were rejected
@@ -240,33 +236,47 @@ int mc_exchange(Maille& maille,int ipas){
       rejected++;
     }
     //we return to the previous state
-    copy(energy_atom0.begin(), energy_atom0.end(), energy_atoms.begin());
+    //copy(energy_atom0.begin(), energy_atom0.end(), energy_atoms.begin());
     Var=0;
-    n_impu--;
+    if(save_type==system_1.getBaseName()){
+      n_impu--;
+    }
+    else{
+      n_impu++;
+    }
     maille.changeParticle(rand_atom,save_type);
   }
+  Natom_base-=n_impu;
   return Natom_base;
 }
 
 float Monte_Carlo(Maille& maille){ //make the monte carlo algorithm
   for(int pas=0;pas<npas;pas++){ //start the algorithm
+    cout<<"On est au pas="<<pas<<endl;
     int N_atom1=mc_exchange(maille,pas); //exchange atoms
-    cout<<"on est au pas="<<pas<<endl;
     if(pas>npeq){
       //Calculs about the energy of the exchange----
       float energy_total = energy(maille); //calcul the energy
       energy_sum=energy_sum+energy_total; //energy final
       c2sum=c2sum+(1-N_atom1/maille.getNumberOfAtoms()); //final concentration
       //Writing into the file for some configurations
-      c2mean=c2sum/(float) (pas-npeq);
-    }
-    if(pas==npas-1){
-      cout<<"fini"<<endl;
+      c2mean=maille.NumberofImpurity(system_1)/maille.getNumberOfAtoms();
     }
   }
   return energy_sum;
 }
 //end of functions in nano------------------------------------
+
+void writeAll(Maille& maille,string filename){
+  float maille_parameter=3.62;
+  ofstream file(filename, ios::in|ios::ate|ios::out);
+  file<<maille.getNumberOfAtoms()<<endl;
+  file<<maille.getBoxeDim()[0]<<" "<<maille.getBoxeDim()[1]<<" "<<maille.getBoxeDim()[2]<<endl;
+  for(int indi=0;indi<maille.getNumberOfAtoms();indi++){
+    file<<maille.getParticleKind(indi)<<" "<<maille.getParticlePosition(indi)[0]*maille_parameter<<" "<<maille.getParticlePosition(indi)[1]*maille_parameter<<" "<<maille.getParticlePosition(indi)[2]*maille_parameter<<endl;
+  }
+  file.close();
+}
 
 //function to write parameters and to do all loops of monte carlo :
 void DoMonteCarlo(Maille& maille){
@@ -290,21 +300,55 @@ void DoMonteCarlo(Maille& maille){
     cout<<"On a fini le monte carlo pour dmu="<<dmu<<endl;
     string filename=name_file(pasMu);
     string path="./"+dir+"/"+filename;
+    string pathAll="./"+dir+"/pAll.xyz";
     cout<<"On écrit les paramètres!"<<endl;
     maille_work.write_parameters(path,pasMu);//write the configuration in a file which is in the directory!
     writeConcen(path2,pasMu,dmu);
+    writeAll(maille,pathAll);
     dmu=dmu+ddmu;
     cout<<endl;
   }
-
 }
 
 void writeConcen(string path,int pasMu,float dmu_n){
   ofstream file(path,ios::in|ios::ate|ios::out);
-  file<<dmu_n<<" "<<c2sum/npas<<endl;
+  file<<dmu_n<<" "<<c2mean<<endl;
   file.close();
 }
 
+
+//For Ternary System(WIP)---------------------------------------------
+float energyTernary(Maille& maille){
+  float enerTot=0;
+  return enerTot;
+}
+
+
+void ExchangeTernary(Maille& maille,int pas){
+  srand (time(NULL));
+  //our initial energy--------------------------------------------------------------------------------
+  int n_impu=0;
+  int Var=0;
+  int Natom_tot=maille.getNumberOfAtoms();
+  int Natom_base=maille.getNumberOfAtoms();
+  float ener_0=0;
+  //we are going to keep data about energy in this vector:
+  vector<float> energy_atom0=vector<float>(maille.getNumberOfAtoms(),0);
+  for(int times=0;times<Natom_tot;times++){
+    //saving before exchange:
+    copy(energy_atoms.begin(), energy_atoms.end(), energy_atom0.begin());
+    //random atom to pick
+    int rand_atom=randomf(Natom_tot-1);
+    string save_type=maille.getParticleKind(rand_atom);
+    //store the old energy
+    ener_0=energyTernary(maille);
+
+
+
+
+  }
+}
+//END OF Function for ternary sys-------------------------------------
 
 //class Boxe{
   Boxe::Boxe(){ //new class (new kind of variables like int, double etc...)
@@ -492,8 +536,26 @@ void writeConcen(string path,int pasMu,float dmu_n){
     return nvois;
   }
 
+  const vector<float> Maille::getParticlePosition(int i){
+    return maille[i].position();
+  }
+
   const Boxe Maille::getBoxe(){ //return the boxe of the maille
     return boxe;
+  }
+
+  const vector<float> Maille::getBoxeDim(){
+    return boxe.getDimension();
+  }
+
+  const int Maille::NumberofImpurity(System& system_1){
+    int countP=0;
+    for(size_t i=0;i<maille.size();i++){
+      if(this->getParticleKind(i)==system_1.getImpurityName()){
+        countP++;
+      }
+    }
+    return countP;
   }
 
   const string Maille::getParticleKind(int sitePosition){
@@ -546,7 +608,7 @@ void writeConcen(string path,int pasMu,float dmu_n){
           EnergyCohesion1=stof(element[2]);
         }
         else if(element[0]==impurity){
-          Tau=Tau+stof(element[2]);
+          Tau=Tau-stof(element[2]);
           EnergyCohesion2=stof(element[2]);
         }
       }
@@ -560,7 +622,7 @@ void writeConcen(string path,int pasMu,float dmu_n){
       string line;
       while(getline(file,line)){
         vector<string> sys=split(line);
-        if((base+"-"+impurity==sys[0])||(base+"-"+impurity==sys[0])){
+        if((base+"-"+impurity==sys[0])||(impurity+"-"+base==sys[0])){
           V=stof(sys[1]);
         }
       }
@@ -574,6 +636,15 @@ void writeConcen(string path,int pasMu,float dmu_n){
 
   const float System::getPotential(){
     return V;
+  }
+
+  const bool System::exists(){
+    if((ImpurityName=="Null")||(baseName=="Null")){
+      return false;
+    }
+    else{
+      return true;
+    }
   }
 
   const string System::getImpurityName(){

@@ -24,7 +24,6 @@ namespace nano{
   //split a string by spaces-----------------
   vector<string> split(const string com);
 
-
   //class System------------------------------
   class System{
   private:
@@ -44,6 +43,8 @@ namespace nano{
     const string getImpurityName();
 
     const string getBaseName();
+
+    const bool exists();
 
     ~System();
   };
@@ -150,8 +151,15 @@ namespace nano{
     //return the boxe of the maille :
     const Boxe getBoxe();
 
+    //return coordonnée of the particle i :----
+    const vector<float> getParticlePosition(int i);
+
+    const int NumberofImpurity(System& system_1);
+
     //return the kind of the particle i :------
     const string getParticleKind(int sitePosition);
+
+    const vector<float> getBoxeDim();
 
     //surcharge de l'operateur = :-------------
     Maille operator=(const Maille& source);
@@ -160,16 +168,30 @@ namespace nano{
     ~Maille();
   };
 
+  //FOR BINARY SYSTEM:----------------------------
   //calcul the energy of the maille
   float energy(Maille& maille);
 
   //change an atom of the maille in the impurity :
   int mc_exchange(Maille& maille,int ipas);
+  //----------------------------------------------
+
+
+  //FOR TERNARY SYSTEM:---------------------------
+  //calcul the energy of a maille
+  float energyTernary(Maille& maille);
+
+  //change an atom of the maille in the impurity :
+  void ExchangeTernary(Maille& maille,int pas);
+  //----------------------------------------------
+
 
   //Monte Carlo of a maille (maybe to put in class maille)---------
   float Monte_Carlo(Maille& maille);
 
   void DoMonteCarlo(Maille& maille);
+
+  void writeAll(Maille& maille,string filename);
 
   void writeConcen(string path,int pasMu,float dmu_n);
 
