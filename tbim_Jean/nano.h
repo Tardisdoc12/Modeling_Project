@@ -172,6 +172,8 @@ namespace nano{
   //calcul the energy of the maille
   float energy(Maille& maille);
 
+  float diffenergy(Maille& maille,int site,vector<float>& ener_0);
+
   //change an atom of the maille in the impurity :
   int mc_exchange(Maille& maille,int ipas);
   //----------------------------------------------

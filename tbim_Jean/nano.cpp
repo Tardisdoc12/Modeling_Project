@@ -167,6 +167,41 @@ float energy(Maille& maille){
   return energy_total;
 }
 
+float diffenergy(Maille& maille,int site,vector<float>& ener_0){
+  float energyMod=0;
+  copy(energy_atoms.begin(),energy_atoms.end(),ener_0.begin());
+  //clear_vector(energy_atoms);
+  energy_atoms[site]=0;
+  if(maille.getParticleKind(site)==system_1.getImpurityName()){
+    for(int j=0;j<maille.getNVois()[site];j++){
+      int voisin_k=maille.getIVois()[site][j];
+      if(maille.getParticleKind(voisin_k)==system_1.getImpurityName()){
+        energy_atoms[site]=energy_atoms[site]+system_1.getPotential();
+      }
+    }
+    //cout<<"Potentiel ="<<system_1.getPotential()<<" Et Tau="<<system_1.getTau()<<endl;
+    energy_atoms[site]=energy_atoms[site]+maille.getNVois()[site]*(system_1.getTau()-system_1.getPotential());
+  }
+  energyMod+=energy_atoms[site]-ener_0[site];
+  //cout<<"Ener_0 ["<<site<<"] = "<<ener_0[site]<<" et "<<"Ernergy Mod ="<<energyMod<<endl;
+
+  for(int i=0;i<maille.getNVois()[site];i++){
+    int voisin_k=maille.getIVois()[site][i];
+    energy_atoms[voisin_k]=0;
+    if(maille.getParticleKind(voisin_k)==system_1.getImpurityName()){
+      for(int k=0;k<maille.getNVois()[voisin_k];k++){
+        int voisin_k_k=maille.getIVois()[voisin_k][k];
+        if(maille.getParticleKind(voisin_k_k)==system_1.getImpurityName()){
+          energy_atoms[voisin_k]+=system_1.getPotential();
+        }
+      }
+      energy_atoms[voisin_k]+=maille.getNVois()[voisin_k]*(system_1.getTau()-system_1.getPotential());
+    }
+    energyMod+=energy_atoms[voisin_k]-ener_0[voisin_k];
+  }
+  return energyMod;
+}
+
 //exchange particles and calcul the new energy
 int mc_exchange(Maille& maille,int ipas){
   srand (time(NULL));
@@ -185,8 +220,6 @@ int mc_exchange(Maille& maille,int ipas){
     //random atom to pick
     int rand_atom=randomf(Natom_tot-1);
     string save_type=maille.getParticleKind(rand_atom);
-
-    ener_0=energy(maille);
 
     if(maille.getParticleKind(rand_atom)==system_1.getBaseName()){
       Var=-1;
@@ -216,11 +249,11 @@ int mc_exchange(Maille& maille,int ipas){
     //modification of the kind of atom random
 
     //calculate the new energy
-    float ener_new=energy(maille);
+    float energy=diffenergy(maille,rand_atom,energy_atom0);
 
     //calculate (thanks to boltzman term compared to a random number)
-    float de = ener_new;
-    de-=ener_0;
+    float de = energy;
+    //cout<<"Energy = "<<energy<<endl;
     de+=Var*dmu;
     if(de<=0){
       continue;
@@ -236,7 +269,7 @@ int mc_exchange(Maille& maille,int ipas){
       rejected++;
     }
     //we return to the previous state
-    //copy(energy_atom0.begin(), energy_atom0.end(), energy_atoms.begin());
+    copy(energy_atom0.begin(), energy_atom0.end(), energy_atoms.begin());
     Var=0;
     if(save_type==system_1.getBaseName()){
       n_impu--;
@@ -252,7 +285,6 @@ int mc_exchange(Maille& maille,int ipas){
 
 float Monte_Carlo(Maille& maille){ //make the monte carlo algorithm
   for(int pas=0;pas<npas;pas++){ //start the algorithm
-    cout<<"On est au pas="<<pas<<endl;
     int N_atom1=mc_exchange(maille,pas); //exchange atoms
     if(pas>npeq){
       //Calculs about the energy of the exchange----
@@ -305,6 +337,7 @@ void DoMonteCarlo(Maille& maille){
     maille_work.write_parameters(path,pasMu);//write the configuration in a file which is in the directory!
     writeConcen(path2,pasMu,dmu);
     writeAll(maille,pathAll);
+    cout<<"On a conc= "<<c2mean<<endl;
     dmu=dmu+ddmu;
     cout<<endl;
   }

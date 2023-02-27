@@ -1,9 +1,9 @@
 fichier des parametres :
-100             npas
-4 		          npw	(npas > 20*npw)
+800             npas
+20 		          npw	(npas > 20*npw)
 4000.           temp
 0.4             dmu
-20              idmumax
+25              idmumax
 0.01	          ddmu
 3               imax
 3               jmax
